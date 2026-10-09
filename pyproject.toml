@@ -1,0 +1,134 @@
+# --> Project
+[project]
+name = "YOUR-PACKAGE-NAME"
+version = "1.0.0"
+description = "LIB_DESCRIPTION"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = []
+authors = [{ name = "meowthpxnk", email = "meowthpxnk@gmail.com" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+urls = { github = "https://github.com/meowthpxnk/YOUR-PACKAGE-NAME", changelog = "https://github.com/meowthpxnk/YOUR-PACKAGE-NAME/blob/main/CHANGELOG.md" }
+
+# --> Poetry
+[tool.poetry]
+packages = [{ include = "YOUR_PACKAGE_NAME" }]
+
+# =============================================================================
+# 🧩 Development Dependencies (dev-only)
+# =============================================================================
+# Tools for linting, testing, formatting, and pre-commit hooks.
+# Installed via: `poetry install` (with --with dev)
+# =============================================================================
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.0"          # Fast linter, formatter, import sorter
+pytest = "^8.0"          # Testing framework
+pytest-custom-exit-code = "^0.3.0"
+pre-commit = "^3.7"      # Git hook manager
+python-dotenv = "^1.1.1"
+# -> for semantic release
+python-semantic-release = "^9.0"
+
+[tool.poetry.group.dev]
+optional = true
+
+# --> Build system
+# =============================================================================
+# 🚀 Build System (required for Poetry)
+# =============================================================================
+[build-system]
+# requires = ["setuptools", "wheel"]
+# build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+# --> Linting
+# =============================================================================
+# 🖌️  ruff — Fast Python Linter & Code Quality
+# =============================================================================
+# Replaces flake8, isort, pyupgrade, and more.
+# =============================================================================
+[tool.ruff]
+# General
+src = ["."]      # Root for resolving first-party imports
+line-length = 79 # PEP 8 standard
+
+# Exclude files/dirs
+exclude = [
+    ".git",
+    "__pycache__",
+    ".mypy_cache",
+    ".venv",
+    "venv",
+    "env",
+    "__init__.py",
+    "README.md",
+    "./scripts",
+]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "A", "B", "C4", "SIM", "ANN"]
+ignore = ["ANN101", "ANN102", "ANN204"]
+fixable = ["ALL"]
+unfixable = []
+# Per-file ignores (e.g., relaxed rules in tests)
+[tool.ruff.lint.per-file-ignores]
+"pytest/*" = [
+    "ANN201", # Missing return type (top-level function)
+    "ANN204", # Missing return type (method)
+    "ANN205", # Missing return type (coroutine)
+    "ANN206", # Missing return type (async method)
+    "ANN001", # Missing type annotation for *args
+    "ANN002", # Missing type annotation for **kwargs
+    "S101",   # Use of `assert` (allowed in tests)
+    "E501",   # Line too long (handled by black/ruff line-length)
+]
+
+# Import sorting (isort-style)
+[tool.ruff.lint.isort]
+known-first-party = ["YOUR_PACKAGE_NAME"] # ← Replace with your actual package name
+
+# --> Tests
+# =============================================================================
+# 🧪 pytest — Testing Framework
+# =============================================================================
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["pytest"]        # Where to look for tests
+python_files = ["test_*.py"] # Test file pattern
+pythonpath = ["."]           # Add root to Python path
+addopts = "-v -x --tb=short --suppress-no-test-exit-code" # Verbose, stop on first fail, short traceback
+markers = [
+    "unit: Quick core isolated tests",
+    "integration: Heavy integration tests with fixtures",
+]
+
+# --> Semaintic version
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:project.version"
+]
+upload_to_pypi = false
+upload_to_release = true
+commit_parser = "conventional"
+
+[tool.semantic_release.branches.main]
+match = "main"
+
+# =============================================================================
+# 📜 Settings CHANGELOG.md
+# =============================================================================
+[tool.semantic_release.changelog.categories]
+changelog_file = "CHANGELOG.md"
+
+# =============================================================================
+# 🕹️ User scripts
+# =============================================================================
+[tool.poetry.scripts]
+rename_lib = "scripts.rename_lib:main"

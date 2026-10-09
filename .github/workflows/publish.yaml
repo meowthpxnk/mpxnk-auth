@@ -1,0 +1,70 @@
+name: Manual Production CI/CD & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-lint:
+        description: 'Run linting (Ruff)?'
+        type: boolean
+        required: true
+        default: true
+      run-tests:
+        description: 'Run tests (Pytest)?'
+        type: boolean
+        required: true
+        default: true
+      run-release:
+        description: 'Create new release and tag Git?'
+        type: boolean
+        required: true
+        default: true
+      run-build:
+        description: 'Compile (Poetry build)?'
+        type: boolean
+        required: true
+        default: true
+      publish-to-pypi:
+        description: 'Publish to PyPI?'
+        type: boolean
+        required: true
+        default: true
+
+jobs:
+  main-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Pipeline Block
+        uses: ./.github/actions/setup-project
+        with:
+          run-lint: ${{ github.event.inputs.run-lint }}
+          run-tests: ${{ github.event.inputs.run-tests }}
+          run-release: ${{ github.event.inputs.run-release }}
+          run-build: ${{ github.event.inputs.run-build }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pypi-publish:
+    runs-on: ubuntu-latest
+    needs: main-pipeline
+    if: ${{ github.event.inputs.run-build == 'true' && github.event.inputs.publish-to-pypi == 'true' }}
+    permissions:
+      id-token: write
+    environment:
+      name: publish
+    steps:
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

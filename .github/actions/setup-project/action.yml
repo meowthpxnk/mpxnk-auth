@@ -1,0 +1,74 @@
+name: 'Python CI Pipeline Block'
+description: 'Sets up Python, Poetry, and optionally runs linting, tests, and build'
+
+inputs:
+  run-lint:
+    description: 'Whether to run Ruff linting'
+    required: false
+    default: 'false'
+  run-tests:
+    description: 'Whether to run Pytest'
+    required: false
+    default: 'false'
+  run-build:
+    description: 'Whether to build poetry package'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v4
+      id: cache-poetry
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Poetry
+      shell: bash
+      run: pipx install poetry
+
+    - name: Install Dependencies
+      shell: bash
+      run: poetry install --with dev
+
+
+    - name: Check code formatting & Lint (Ruff)
+      if: ${{ inputs.run-lint == 'true' || inputs.run-lint == true }}
+      shell: bash
+      run: |
+        poetry run ruff format . --check
+        poetry run ruff check .
+
+    - name: Run Tests (Pytest)
+      if: ${{ inputs.run-tests == 'true' || inputs.run-tests == true }}
+      shell: bash
+      run: poetry run pytest
+
+    - name: Python Semantic Release
+      if: ${{ inputs.run-release == 'true' || inputs.run-release == true }}
+      shell: bash
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        poetry run semantic-release version
+
+    - name: Build release distributions
+      if: ${{ inputs.run-build == 'true' || inputs.run-build == true }}
+      shell: bash
+      run: poetry build
+
+    - name: Upload distributions artifact
+      if: ${{ inputs.run-build == 'true' || inputs.run-build == true }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-dists
+        path: dist/
