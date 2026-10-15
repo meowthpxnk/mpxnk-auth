@@ -1,4 +1,4 @@
-# Meowthpxnk multisession auth util
+# Meowthpxnk multisession auth util for FastAPI
 
 - [How this works](#how-this-works)
 - [Settings](#settings)
@@ -92,11 +92,11 @@ auth_api = AuthAPI(
 1. Install library
 
 ```sh
-pip install mpxnk-auth[fastapi,crypto]
+pip install mpxnk-auth
 ```
 
 ```sh
-poetry add mpxnk-auth[fastapi,crypto]
+poetry add mpxnk-auth
 ```
 
 1. Generate and register JWT keys. See [JWT keys](#jwt-keys).
