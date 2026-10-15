@@ -52,12 +52,15 @@ RefreshTokenDepends = Annotated[
 
 bearer = HTTPBearer()
 
-BearerAuthDepends = Annotated[HTTPAuthorizationCredentials, Depends(bearer)]
+BearerCredentialsDepends = Annotated[
+    HTTPAuthorizationCredentials,
+    Depends(bearer),
+]
 # -> Access Token Dependency
 
 
 async def get_current_token(
-    credentials: BearerAuthDepends,
+    credentials: BearerCredentialsDepends,
 ) -> str:
     return credentials.credentials
 

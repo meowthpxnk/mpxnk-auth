@@ -1,12 +1,14 @@
 """Unit tests for FastAPI auth dependencies."""
 
 from types import SimpleNamespace
+from typing import get_type_hints
 
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 import pytest
 from mpxnk_auth.fastapi.dependencies import (
+    bearer,
     get_auth_api,
     get_current_token,
     get_refresh_token,
@@ -34,6 +36,18 @@ def test_get_refresh_token_reads_cookie() -> None:
 
     assert get_refresh_token(present) == "jwt"
     assert get_refresh_token(missing) is None
+
+
+def test_bearer_dependency_is_not_recursive() -> None:
+    credentials = get_type_hints(get_current_token, include_extras=True)[
+        "credentials"
+    ]
+    token = get_type_hints(read_access_token, include_extras=True)[
+        "bearer_token"
+    ]
+
+    assert credentials.__metadata__[0].dependency is bearer
+    assert token.__metadata__[0].dependency is get_current_token
 
 
 async def test_get_current_token_returns_bearer_credentials() -> None:
