@@ -1,23 +1,23 @@
 # --> Project
 [project]
-name = "YOUR-PACKAGE-NAME"
+name = "mpxnk-auth"
 version = "1.0.0"
-description = "LIB_DESCRIPTION"
+description = "Multisession python authorisation library"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 readme = "README.md"
-dependencies = []
+dependencies = ["colorama (>=0.4.6,<0.5.0)", "cryptography (>=50.0.2,<51.0.0)", "pyjwt (>=2.15.1,<3.0.0)", "pydantic-settings (>=2.15.0,<3.0.0)", "redis (>=8.1.0,<9.0.0)", "fastapi (>=0.143.0,<0.144.0)"]
 authors = [{ name = "meowthpxnk", email = "meowthpxnk@gmail.com" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-urls = { github = "https://github.com/meowthpxnk/YOUR-PACKAGE-NAME", changelog = "https://github.com/meowthpxnk/YOUR-PACKAGE-NAME/blob/main/CHANGELOG.md" }
+urls = { github = "https://github.com/meowthpxnk/mpxnk-auth", changelog = "https://github.com/meowthpxnk/mpxnk-auth/blob/main/CHANGELOG.md" }
 
 # --> Poetry
 [tool.poetry]
-packages = [{ include = "YOUR_PACKAGE_NAME" }]
+packages = [{ include = "mpxnk_auth" }]
 
 # =============================================================================
 # 🧩 Development Dependencies (dev-only)
@@ -33,6 +33,8 @@ pre-commit = "^3.7"      # Git hook manager
 python-dotenv = "^1.1.1"
 # -> for semantic release
 python-semantic-release = "^9.0"
+pytest-asyncio = "^1.4.0"
+httpx = "^0.28.1"
 
 [tool.poetry.group.dev]
 optional = true
@@ -92,7 +94,7 @@ unfixable = []
 
 # Import sorting (isort-style)
 [tool.ruff.lint.isort]
-known-first-party = ["YOUR_PACKAGE_NAME"] # ← Replace with your actual package name
+known-first-party = ["mpxnk_auth"] # ← Replace with your actual package name
 
 # --> Tests
 # =============================================================================
@@ -104,6 +106,8 @@ testpaths = ["pytest"]        # Where to look for tests
 python_files = ["test_*.py"] # Test file pattern
 pythonpath = ["."]           # Add root to Python path
 addopts = "-v -x --tb=short --suppress-no-test-exit-code" # Verbose, stop on first fail, short traceback
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: Quick core isolated tests",
     "integration: Heavy integration tests with fixtures",
