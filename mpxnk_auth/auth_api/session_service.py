@@ -2,9 +2,9 @@ from typing import Generic
 
 from mpxnk_auth.exceptions import (
     FailedRefreshSession,
+    NotFoundSession,
     NotValidTokenType,
     SessionLimitReached,
-    NotFoundSession,
 )
 from mpxnk_auth.schemas import (
     DataT,
