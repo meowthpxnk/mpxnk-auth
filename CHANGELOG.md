@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.1.0 (2026-10-16)
+
+### Features
+
+- Reject access tokens when the Redis session is gone
+  ([`f42f66f`](https://github.com/meowthpxnk/mpxnk-auth/commit/f42f66f107928e2d8cd34df60633c037517c53da))
+
+
 ## v2.0.0 (2026-10-15)
 
 ### Features
