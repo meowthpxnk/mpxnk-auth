@@ -5,7 +5,7 @@ import redis.asyncio as aioredis
 
 from mpxnk_auth.constants import CURRENT_SESSION_F, SESSIONS_F
 from mpxnk_auth.exceptions import NotFoundSession
-from mpxnk_auth.schemas import SessionStringData
+from mpxnk_auth.schemas import SessionStringData, TSessionID
 from mpxnk_auth.types import (
     P,
     T,
@@ -122,3 +122,11 @@ class CacheStore:
 
     async def count_tokens(self, username: TUsername) -> int:
         return len(await self.get_all_token_names(username))
+
+    async def session_id_exists(
+        self, username: TUsername, session_id: TSessionID
+    ) -> bool:
+        exists = await self.redis.get(
+            SessionCacheString(username, session_id).key
+        )
+        return bool(exists)

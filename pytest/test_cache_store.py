@@ -110,3 +110,26 @@ async def test_bytes_redis_values_are_decoded(fake_redis_cls) -> None:
 def test_as_str_normalizes_bytes() -> None:
     assert CacheStore._as_str(b"token") == "token"
     assert CacheStore._as_str("token") == "token"
+
+
+async def test_session_id_exists_follows_the_redis_key(
+    fake_redis_cls,
+) -> None:
+    store = CacheStore(fake_redis_cls())
+    session = _session()
+    await store.set_token(session, "refresh-jwt", 10)
+
+    assert await store.session_id_exists("alice", "sid") is True
+    assert await store.session_id_exists("alice", "other") is False
+    assert await store.session_id_exists("bob", "sid") is False
+
+    await store.remove_token(session)
+
+    assert await store.session_id_exists("alice", "sid") is False
+
+
+async def test_session_id_exists_accepts_bytes_values(fake_redis_cls) -> None:
+    store = CacheStore(fake_redis_cls(decode_responses=False))
+    await store.set_token(_session(), "refresh-jwt", 10)
+
+    assert await store.session_id_exists("alice", "sid") is True

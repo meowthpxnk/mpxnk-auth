@@ -73,12 +73,12 @@ BearerAuthDepends = Annotated[
 # -> Read Access Token Dependency
 
 
-def read_access_token(
+async def read_access_token(
     service: SessionServiceDepends,
     bearer_token: BearerAuthDepends,
 ) -> PayloadT | UserT:
     try:
-        return service.decode_access_token(bearer_token)
+        return await service.decode_access_token(bearer_token)
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 

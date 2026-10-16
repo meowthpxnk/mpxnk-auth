@@ -169,12 +169,14 @@ async def test_logout_removes_only_the_current_session(make_client) -> None:
     second_id = _session_id(auth_api, second_access)
 
     logout = await client.post("/auth/logout", headers=_bearer(first_access))
-    again = await client.post("/auth/logout", headers=_bearer(first_access))
-    me = await client.get("/auth/me", headers=_bearer(first_access))
+    revoked = await client.get("/auth/me", headers=_bearer(first_access))
+    kept = await client.get("/auth/me", headers=_bearer(second_access))
 
     assert logout.status_code == 200
-    assert again.status_code == 404
-    assert me.status_code == 200
+    assert revoked.status_code == 401
+    assert revoked.json()["detail"] == "Invalid token"
+    assert kept.status_code == 200
+    assert kept.json() == {"username": "alice", "role": "user"}
     assert await redis.get(f"userSession.alice.{first_id}") is None
     assert await redis.get(f"userSession.alice.{second_id}") == (
         _refresh_cookie(second)
@@ -186,19 +188,23 @@ async def test_revoke_all_sessions_clears_the_user(make_client) -> None:
     alice = await _login(client)
     bob = await _login(client, username="bob")
 
+    alice_access = alice.json()["access_token"]
+    bob_access = bob.json()["access_token"]
     response = await client.post(
         "/auth/revoke-all-sessions",
-        headers=_bearer(alice.json()["access_token"]),
+        headers=_bearer(alice_access),
     )
-    me = await client.get(
-        "/auth/me", headers=_bearer(alice.json()["access_token"])
-    )
+    alice_me = await client.get("/auth/me", headers=_bearer(alice_access))
+    bob_me = await client.get("/auth/me", headers=_bearer(bob_access))
 
     assert response.status_code == 200
-    assert me.status_code == 200
+    assert alice_me.status_code == 401
+    assert alice_me.json()["detail"] == "Invalid token"
+    assert bob_me.status_code == 200
+    assert bob_me.json() == {"username": "bob", "role": "admin"}
     assert await redis.keys("userSession.alice.*") == []
     assert await redis.get(
-        "userSession.bob." + _session_id(auth_api, bob.json()["access_token"])
+        "userSession.bob." + _session_id(auth_api, bob_access)
     ) == _refresh_cookie(bob)
 
 

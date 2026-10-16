@@ -4,6 +4,7 @@ from mpxnk_auth.exceptions import (
     FailedRefreshSession,
     NotValidTokenType,
     SessionLimitReached,
+    NotFoundSession,
 )
 from mpxnk_auth.schemas import (
     DataT,
@@ -79,7 +80,7 @@ class AuthSessionService(Generic[UserT, PayloadT, DataT]):
             session.username
         )
         decoded = [
-            self._decode_refresh_token_data(token)
+            await self._decode_refresh_token_data(token)
             for token in previous_sessions
         ]
         sessions_to_close = self._get_last_sessions(decoded, count)
@@ -94,7 +95,7 @@ class AuthSessionService(Generic[UserT, PayloadT, DataT]):
 
     async def refresh_session(self, refresh_token: str) -> tuple[str, str]:
         """Rotate a refresh token after Redis proves it is current."""
-        data = self._decode_refresh_token_data(refresh_token)
+        data = await self._decode_refresh_token_data(refresh_token)
         try:
             await self._validate_refresh_token(data, refresh_token)
         except FailedRefreshSession:
@@ -104,19 +105,22 @@ class AuthSessionService(Generic[UserT, PayloadT, DataT]):
 
     # -> DECODING METHODS
 
-    def _decode_typed_token(
+    async def _decode_typed_token(
         self, token: str, expected_type: JWTTokenTypeEnum
     ) -> PayloadT:
         """Decode a JWT and reject the wrong token type."""
         data = self.jwt_provider.decode(token)
         self._validate_token_type(data, expected_type)
+        await self._validate_session_id(data)
         return data
 
-    def decode_access_token(self, access_token: str) -> PayloadT | UserT:
-        return self._decode_typed_token(access_token, JWTTokenTypeEnum.ACCESS)
+    async def decode_access_token(self, access_token: str) -> PayloadT | UserT:
+        return await self._decode_typed_token(
+            access_token, JWTTokenTypeEnum.ACCESS
+        )
 
-    def _decode_refresh_token_data(self, refresh_token: str) -> PayloadT:
-        return self._decode_typed_token(
+    async def _decode_refresh_token_data(self, refresh_token: str) -> PayloadT:
+        return await self._decode_typed_token(
             refresh_token, JWTTokenTypeEnum.REFRESH
         )
 
@@ -167,6 +171,17 @@ class AuthSessionService(Generic[UserT, PayloadT, DataT]):
         """Reject JWTs whose type does not match the expected kind."""
         if token_data.type != expected_type:
             raise NotValidTokenType(token_data.username, token_data.session_id)
+
+    async def _validate_session_id(
+        self,
+        data: PayloadT,
+    ) -> None:
+        """Reject JWTs whose session_id does not match the expected kind."""
+        exists = await self.cache_store.session_id_exists(
+            data.username, data.session_id
+        )
+        if not exists:
+            raise NotFoundSession(data.username, data.session_id)
 
     # -> MAIN TOKEN GENERATION
 

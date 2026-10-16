@@ -62,7 +62,7 @@ async def test_read_access_token_returns_payload(auth_api) -> None:
     user = auth_api.user_cls(username="alice", role="admin")
     access, _refresh = await auth_api.session_service.create_session(user)
 
-    payload = read_access_token(auth_api.session_service, access)
+    payload = await read_access_token(auth_api.session_service, access)
 
     assert payload.username == "alice"
     assert payload.role == "admin"
@@ -73,9 +73,9 @@ async def test_read_access_token_returns_payload(auth_api) -> None:
     }
 
 
-def test_read_access_token_rejects_garbage(auth_api) -> None:
+async def test_read_access_token_rejects_garbage(auth_api) -> None:
     with pytest.raises(HTTPException) as exc:
-        read_access_token(auth_api.session_service, "not-a-jwt")
+        await read_access_token(auth_api.session_service, "not-a-jwt")
 
     assert exc.value.status_code == 401
     assert exc.value.detail == "Invalid token"

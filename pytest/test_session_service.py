@@ -32,12 +32,11 @@ async def test_create_session_stores_only_the_refresh_token(auth_api) -> None:
         SessionCacheString("alice", session_id)
     )
 
+    decoded = await auth_api.session_service.decode_access_token(access)
+
     assert stored == refresh
     assert access != refresh
-    assert (
-        auth_api.session_service.decode_access_token(access).type
-        is JWTTokenTypeEnum.ACCESS
-    )
+    assert decoded.type is JWTTokenTypeEnum.ACCESS
 
 
 async def test_refresh_keeps_session_id_and_replaces_the_token(
@@ -124,13 +123,43 @@ async def test_access_token_cannot_refresh_a_session(auth_api) -> None:
     )
 
 
+async def test_revoked_access_token_is_rejected_without_touching_others(
+    auth_api,
+) -> None:
+    service = auth_api.session_service
+    access, _refresh = await service.create_session(_user(auth_api))
+    other_access, other_refresh = await service.create_session(
+        _user(auth_api)
+    )
+    session_id = _session_id(auth_api, access)
+    other_id = _session_id(auth_api, other_access)
+
+    await service.revoke_session(SessionCacheString("alice", session_id))
+
+    with pytest.raises(NotFoundSession) as exc:
+        await service.decode_access_token(access)
+
+    decoded = await service.decode_access_token(other_access)
+
+    assert exc.value.username == "alice"
+    assert exc.value.session_id == session_id
+    assert decoded.session_id == other_id
+    assert decoded.type is JWTTokenTypeEnum.ACCESS
+    assert (
+        await auth_api.cache_store.get_token(
+            SessionCacheString("alice", other_id)
+        )
+        == other_refresh
+    )
+
+
 async def test_refresh_token_cannot_be_read_as_access(auth_api) -> None:
     _access, refresh = await auth_api.session_service.create_session(
         _user(auth_api)
     )
 
     with pytest.raises(NotValidTokenType):
-        auth_api.session_service.decode_access_token(refresh)
+        await auth_api.session_service.decode_access_token(refresh)
 
 
 async def test_session_cap_keeps_the_newest_sessions(

@@ -10,29 +10,30 @@
 
 Multisession auth. One account is one `username`. Each successful login opens a separate session for that username: its own `session_id`, its own access JWT, and its own refresh JWT.
 
-The access token is returned in the JSON body and sent as `Authorization: Bearer`. The refresh token is stored in Redis at `userSession.{username}.{session_id}` and set as the `HttpOnly` cookie `Refresh-Token`. Protected routes trust the access JWT alone. They do not read Redis or the database.
+The access token is returned in the JSON body and sent as `Authorization: Bearer`. The refresh token is stored in Redis at `userSession.{username}.{session_id}` and set as the `HttpOnly` cookie `Refresh-Token`. Protected routes decode the access JWT and then check that this Redis key still exists. They do not read the database. The access JWT itself is not stored.
 
 ### Session cap
 
 A username may hold **5 live sessions** (`MAX_USER_SESSIONS`). The cap is counted from Redis keys `userSession.{username}.`\*.
 
-The 6th login still opens, then the oldest session is deleted. Oldest means the smallest refresh `exp`. A refresh rewrites `exp`, so a session that was just refreshed is newer than one that has been idle. Logout removes only the current key. `revoke-all-sessions` removes every key of that username.
+The 6th login still opens, then the oldest session is deleted. Oldest means the smallest refresh `exp`. A refresh rewrites `exp`, so a session that was just refreshed is newer than one that has been idle. Logout removes only the current key. `revoke-all-sessions` removes every key of that username. Once a key is gone, that session's access token fails on the next request.
 
 ### Refresh
 
 `POST /auth/refresh-token` reads the `Refresh-Token` cookie and keeps the same `session_id`.
 
 1. The JWT must be a valid refresh token.
-2. Its string must equal the value stored in Redis for that session.
-3. On a match, a new access token and a new refresh token are issued. Redis and the cookie are overwritten. The previous refresh token is dead.
+2. Redis must still hold `userSession.{username}.{session_id}`. A missing key fails the refresh and leaves the user's other sessions in place.
+3. The cookie string must equal the value stored for that session. A different string revokes every session of that username.
+4. On a match, a new access token and a new refresh token are issued. Redis and the cookie are overwritten. The previous refresh token is dead.
 
 Default lifetimes: access **15 minutes** (`ACCESS_TOKEN_TTL=900`), refresh **28 days** (`REFRESH_TOKEN_TTL=2419200`).
 
 ### Security
 
-A stolen token dies on its own clock. The access token is not stored server-side, so theft does not revoke it: it works until `exp`, at most 15 minutes, and logout does not cut that short. After that it cannot be renewed without the refresh cookie.
+An access token is valid only while its Redis session key exists and `exp` has not passed. Logout, `revoke-all-sessions`, `revoke-all-sessions-except-current`, session-cap eviction, and a reused refresh token delete that key, so the access JWT returns `401` on the next request even if `exp` is still in the future. Until one of those happens, a stolen access token works for at most 15 minutes.
 
-The refresh token is the long-lived secret, so it rotates. The first use matches Redis and replaces the token. A second use of the same token no longer matches, and every session of that `username` is deleted, including the one just created. The account is not banned. A password login opens a new session. Whoever still holds the old cookie is the side that triggers the wipe.
+The refresh token is the long-lived secret, so it rotates. The first use matches Redis and replaces the token. A second use of the same token, while the session key is still there, no longer matches, and every session of that `username` is deleted, including the one just created. The account is not banned. A password login opens a new session. Whoever still holds the old cookie is the side that triggers the wipe. If the session key is already gone, the refresh fails and the other sessions stay.
 
 ## Settings
 
@@ -226,7 +227,7 @@ router.include_router(router_internal)
 
 ## API
 
-Routes from `mpxnk_auth.fastapi.router`. No JSON body. Bearer routes use `Authorization: Bearer <access_token>`; a bad token returns `401` `{ "detail": "Invalid token" }`.
+Routes from `mpxnk_auth.fastapi.router`. No JSON body. Bearer routes use `Authorization: Bearer <access_token>`. A bad JWT, the wrong token type, or a session key that is no longer in Redis returns `401` `{ "detail": "Invalid token" }`.
 
 ### `POST /auth/refresh-token`
 
@@ -240,7 +241,7 @@ Rotates the session and keeps the same `session_id`.
 { "access_token": "<jwt>" }
 ```
 
-A cookie that does not match Redis revokes every session of that user.
+A cookie whose session key is missing fails the refresh and leaves other sessions in place. A cookie that finds the key but does not match the stored refresh token revokes every session of that user.
 
 ### `GET /auth/me`
 
@@ -258,7 +259,7 @@ Revokes the session from the access token.
 
 **Request** — `Authorization: Bearer <access_token>`
 
-**Response** `200` empty · `404` session is not in Redis
+**Response** `200` empty. After that, the same access token returns `401`. A request whose session is already gone also returns `401`.
 
 ### `POST /auth/revoke-all-sessions`
 
