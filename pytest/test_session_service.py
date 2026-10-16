@@ -128,9 +128,7 @@ async def test_revoked_access_token_is_rejected_without_touching_others(
 ) -> None:
     service = auth_api.session_service
     access, _refresh = await service.create_session(_user(auth_api))
-    other_access, other_refresh = await service.create_session(
-        _user(auth_api)
-    )
+    other_access, other_refresh = await service.create_session(_user(auth_api))
     session_id = _session_id(auth_api, access)
     other_id = _session_id(auth_api, other_access)
 
