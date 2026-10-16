@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.0.0 (2026-10-15)
+
+### Features
+
+- Trigger major release
+  ([`04dd829`](https://github.com/meowthpxnk/mpxnk-auth/commit/04dd8291c1c635f7fdff01ae85001a0617ba3dc8))
+
+
 ## v1.0.0 (2026-10-15)
 
 ### Bug Fixes
@@ -15,3 +23,8 @@
 
 - Update README.md
   ([`7b2ab4e`](https://github.com/meowthpxnk/mpxnk-auth/commit/7b2ab4e4e213f9c8bb322ccae657ef13411f59bd))
+
+### Features
+
+- Trigger major release
+  ([`601a5ec`](https://github.com/meowthpxnk/mpxnk-auth/commit/601a5ecbaa19bafcdd339f01517c84ef480b47e8))
